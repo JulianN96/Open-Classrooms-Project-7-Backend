@@ -15,13 +15,13 @@ exports.signup = (req, res, next) => {
     })
   } 
   //Password checker for onlyspaces
-  if(!req.body.password.trim().length){
+  else if(!req.body.password.trim().length){
     res.status(500).json({
       error: passwordFormatError
     })
   }
   //Password Strength Checker
-  if(!passwordStrengthTester.test(req.body.password)){
+  else if(!passwordStrengthTester.test(req.body.password)){
     res.status(500).json({
       error: passwordFormatError
     })
