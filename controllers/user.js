@@ -2,6 +2,10 @@ const User = require('../models/user');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
+if (process.env.NODE_ENV !== 'production'){
+  require('dotenv').config();
+}
+
 const passwordFormatError = 'Mot de passe doit contenir un minimum de 8 charactères, des lettres majuscules et miniuscules, un chiffre et un charactère special'
 const emailFormatError = `Votre addresse mail n'est pas valide`
 const validRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)$/;
@@ -56,19 +60,19 @@ exports.login = (req, res, next) => {
     (user) => {
       if(!user){
         return res.status(401).json({
-          error: new Error('User not found')
+          message: 'User not found'
         });
       }
       bcrypt.compare(req.body.password, user.password).then(
         (valid) => {
           if(!valid){
             return res.status(401).json({
-              error: new Error('Incorrect Password')
+              message: 'Password Incorrect'
             });
           }
           const token = jwt.sign(
             {userId: user._id},
-             'random_token_secret',
+             `${process.env.JSONWEBTOKENVALIDATOR}`,
             {expiresIn: '24h'}
             );
           res.status(200).json({
@@ -79,7 +83,7 @@ exports.login = (req, res, next) => {
       ).catch(
         (error) => {
           res.status(500).json({
-            error: error
+            error: new Error('Server Error') + error.message
           })
         }
       )
@@ -87,7 +91,7 @@ exports.login = (req, res, next) => {
   ).catch(
     (error)=> {
       res.status(500).json({
-        error: error
+        error: new Error('Server Error') + error.message
       })
     }
   )
