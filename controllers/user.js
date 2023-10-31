@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 
 const passwordFormatError = 'Mot de passe doit contenir un minimum de 8 charactères, des lettres majuscules et miniuscules, un chiffre et un charactère special'
 const emailFormatError = `Votre addresse mail n'est pas valide`
-const validRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+const validRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)$/;
 const passwordStrengthTester = new RegExp('(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9])(?=.{8,})')
 
 exports.signup = (req, res, next) => {
