@@ -37,12 +37,17 @@ exports.getOneBook = (req, res, next) => {
     (book) => {
       res.status(200).json(book);
     } 
-    //TODO ADD 404 HERE
   ).catch(
     (error) => {
-      res.status(500).json({
-        error: error
-      })
+      if(error.name === 'CastError'){
+        res.status(404).json({
+          error: 'Aucun Livre avec cet ID retrouvé ' + error
+        })
+      }else if(error){
+        res.status(500).json({
+          error: 'Erreur du serveur: ' + error
+        })
+      }
     }
   )
 }
@@ -86,7 +91,7 @@ exports.modifyBook = (req, res, next) => {
     (error) => {
       console.log(error)
       res.status(400).json({
-        error: error
+        error: `Erreur, ce livre n'a pu etre modifié` + error
       })
     }
   )
@@ -108,7 +113,7 @@ exports.deleteBook = (req,res,next) => {
         ).catch(
           (error)=>{
             res.status(400).json({
-              error: error
+              error: `Erreur, ce livre n'a pu etre supprimé` + error
             })
           }
         )
