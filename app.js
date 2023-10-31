@@ -1,11 +1,13 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const path = require('path')
-const mongoDBURL = 'mongodb+srv://juliannorris96:0bCSe8IN3KzTa7Fk@monvieuxgrimoire.rzmms9x.mongodb.net/?retryWrites=true&w=majority'
+const path = require('path');
+if (process.env.NODE_ENV !== 'production'){
+  require('dotenv').config();
+}
+const mongoDBURL = `mongodb+srv://${process.env.MONGODBUSER}:${process.env.MONGODBPASSWORD}@${process.env.MONGODBADDRESS}/?retryWrites=true&w=majority`
 
 const app = express();
 
-//TODO VARIABLE ENVIRONMENTS
 
 const bookRoutes = require('./routes/book');
 const userRoutes = require('./routes/user');
