@@ -43,6 +43,11 @@ exports.getOneBook = (req, res, next) => {
     _id: req.params.id,
   })
     .then((book) => {
+      if (!book) {
+        return res.status(404).json({
+          message: 'Aucun Livre avec cet ID retrouvé',
+        });
+      }
       res.status(200).json(book);
     })
     .catch((error) => {
@@ -160,26 +165,25 @@ exports.addRating = (req, res, next) => {
     userId: req.body.userId,
     grade: req.body.rating,
   };
-  Book.findOne({ _id: req.params.id })
-    .then((book) => {
-      if(!book){
-        return res.status(404).json({
-          message: 'Book not found'
-        })
-      }
-      console.log('*****', book)
-      book.ratings.push(newRating);
-      book.averageRating = averageRatingCalculator(book);
-      console.log(book);
-      book.save()
+  Book.findOne({ _id: req.params.id }).then((book) => {
+    if (!book) {
+      return res.status(404).json({
+        message: 'Book not found',
+      });
+    }
+    console.log('*****', book);
+    book.ratings.push(newRating);
+    book.averageRating = averageRatingCalculator(book);
+    console.log(book);
+    book
+      .save()
       .then(() => {
         res.status(201).json(book);
       })
-      .catch(
-        (error) => {
+      .catch((error) => {
         res.status(400).json({
-          message: 'Avis pas ajoute' + error
-        })
-      })
-    })
+          message: 'Avis pas ajoute' + error,
+        });
+      });
+  });
 };
