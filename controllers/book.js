@@ -1,5 +1,6 @@
 const fs = require('fs');
 const Book = require('../models/book');
+const { Error } = require('mongoose');
 
 function averageRatingCalculator(book) {
   let totalRating = 0;
@@ -11,17 +12,21 @@ function averageRatingCalculator(book) {
 }
 
 exports.createBook = (req, res, next) => {
+  //TODO FIX IMAGE FILE NAME
+  //TODO TEST WITH NO IMAGE, TEST PUT WITH IMAGE SUPPRESSION.
   const url = req.protocol + '://' + req.get('host');
-  req.body.book = JSON.parse(req.body.book);
+  const bookobject = JSON.parse(req.body.book);
+  if(!req.file){
+    return res.status(400).json({
+      message: 'No image detected'
+    })
+  }
   const book = new Book({
-    title: req.body.book.title,
-    userId: req.body.book.userId,
-    author: req.body.book.author,
+    ...bookobject,
+    userId: req.userId,
     imageUrl: url + '/images/' + req.file.filename,
-    year: req.body.book.year,
-    genre: req.body.book.genre,
-    ratings: req.body.book.ratings,
-    averageRating: req.body.book.ratings[0].grade,
+    ratings: [],
+    averageRating: 0,
   });
   book
     .save()
@@ -53,7 +58,7 @@ exports.getOneBook = (req, res, next) => {
     .catch((error) => {
       if (error.name === 'CastError') {
         res.status(404).json({
-          error: 'Aucun Livre avec cet ID retrouvé ' + error,
+          error: 'Aucun Livre retrouvé ' + error,
         });
       } else if (error) {
         res.status(500).json({
@@ -113,7 +118,18 @@ exports.modifyBook = (req, res, next) => {
 };
 
 exports.deleteBook = (req, res, next) => {
+
   Book.findOne({ _id: req.params.id }).then((book) => {
+    if (!book) {
+      return res.status(404).json({
+        message: 'Book not found',
+      });
+    }
+    if(book.userId !== req.userId){
+      return res.status(401).json({
+        message: 'You did not create this book and are not authorized to delete it'
+      })
+    }
     const filename = book.imageUrl.split('/images/')[1];
     fs.unlink('images/' + filename, () => {
       Book.deleteOne({ _id: req.params.id })
@@ -159,18 +175,32 @@ exports.getBestBooks = (req, res, next) => {
 };
 
 exports.addRating = (req, res, next) => {
+  //TODO ADD VALIDATOR FOR RATING VALUE AND USERID
   console.log(req.params);
   console.log(req.body);
   let newRating = {
     userId: req.body.userId,
     grade: req.body.rating,
   };
+  if(newRating.grade < 0 || newRating.grade > 5){
+    return res.status(400).json({
+      message: 'Error with new rating. Rating cannot be higher than 5 or lower than 0.'
+    })
+  }
   Book.findOne({ _id: req.params.id }).then((book) => {
     if (!book) {
       return res.status(404).json({
         message: 'Book not found',
       });
     }
+    book.ratings.forEach((rating) =>{
+      console.log(rating.userId)
+      if(rating.userId == newRating.userId){
+        return res.status(400).json({
+          message: 'You have already left a review for this book'
+        })
+      }
+    })
     console.log('*****', book);
     book.ratings.push(newRating);
     book.averageRating = averageRatingCalculator(book);
