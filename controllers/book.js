@@ -12,14 +12,12 @@ function averageRatingCalculator(book) {
 }
 
 exports.createBook = (req, res, next) => {
-  //TODO FIX IMAGE FILE NAME
-  //TODO TEST WITH NO IMAGE, TEST PUT WITH IMAGE SUPPRESSION.
   const url = req.protocol + '://' + req.get('host');
   const bookobject = JSON.parse(req.body.book);
-  if(!req.file){
+  if (!req.file) {
     return res.status(400).json({
-      message: 'No image detected'
-    })
+      message: 'No image detected',
+    });
   }
   const book = new Book({
     ...bookobject,
@@ -118,17 +116,20 @@ exports.modifyBook = (req, res, next) => {
 };
 
 exports.deleteBook = (req, res, next) => {
-
   Book.findOne({ _id: req.params.id }).then((book) => {
     if (!book) {
       return res.status(404).json({
         message: 'Book not found',
       });
     }
-    if(book.userId !== req.userId){
-      return res.status(401).json({
-        message: 'You did not create this book and are not authorized to delete it'
-      })
+    if (book.userId != req.userId) {
+      console.log(book.userId);
+      console.log(req.userId);
+      console.log('Book deletion attempt failed');
+      return res.status(403).json({
+        message:
+          'You did not create this book and are not authorized to delete it',
+      });
     }
     const filename = book.imageUrl.split('/images/')[1];
     fs.unlink('images/' + filename, () => {
@@ -182,10 +183,11 @@ exports.addRating = (req, res, next) => {
     userId: req.body.userId,
     grade: req.body.rating,
   };
-  if(newRating.grade < 0 || newRating.grade > 5){
+  if (newRating.grade < 0 || newRating.grade > 5) {
     return res.status(400).json({
-      message: 'Error with new rating. Rating cannot be higher than 5 or lower than 0.'
-    })
+      message:
+        'Error with new rating. Rating cannot be higher than 5 or lower than 0.',
+    });
   }
   Book.findOne({ _id: req.params.id }).then((book) => {
     if (!book) {
@@ -193,14 +195,14 @@ exports.addRating = (req, res, next) => {
         message: 'Book not found',
       });
     }
-    book.ratings.forEach((rating) =>{
-      console.log(rating.userId)
-      if(rating.userId == newRating.userId){
+    book.ratings.forEach((rating) => {
+      console.log(rating.userId);
+      if (rating.userId == newRating.userId) {
         return res.status(400).json({
-          message: 'You have already left a review for this book'
-        })
+          message: 'You have already left a review for this book',
+        });
       }
-    })
+    });
     console.log('*****', book);
     book.ratings.push(newRating);
     book.averageRating = averageRatingCalculator(book);
