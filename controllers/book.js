@@ -67,56 +67,105 @@ exports.getOneBook = (req, res, next) => {
 };
 
 exports.modifyBook = (req, res, next) => {
-  //TODO VALIDATORS AND AUTH, RAW TEXT STUFF!!!
   Book.findOne({ _id: req.params.id }).then((obook) => {
     if (!obook) {
       return res.status(404).json({
         message: 'Book not found',
       });
     }
+    //Checks for unauthorized modification
+    if (req.userId != obook.userId) {
+      console.log(
+        'Attempted modification of a book by an author different that its origin. 403 sent'
+      );
+      return res.status(403).json({
+        message:
+          'You did not create this book and are not authorized to modify it',
+      });
+    }
 
-    console.log(obook);
+    //Try catch block to check for JSON data type
+    try {
+      req.body.book = JSON.parse(req.body.book);
+    }
+    catch(error){
+      console.log('Error, expected JSON object, not raw data')
+      return res.status(400).json({
+        message: 'Error, expected JSON object but received Raw data'
+      })
+    }
     let book = Book({ _id: req.params.id });
+    //Checks for any missing elements
+    if (
+      !req.body.book.title ||
+      !req.body.book.author ||
+      !req.body.book.year ||
+      !req.body.book.genre
+    ) {
+      console.log(
+        'Error, an element is missing from the incoming request body'
+      );
+      return res.status(400).json({
+        message:
+          'The title, author, year or genre is missing from this update request',
+      });
+    } 
+    //Checks for only spaces in the fields
+    else if (
+      !req.body.book.title.trim().length ||
+      !req.body.book.author.trim().length ||
+      req.body.book.year == NaN ||
+      !req.body.book.genre.trim().length
+    ) {
+      console.log(
+        'Error, an element is not formatted correctly from the incoming request body'
+      );
+      return res.status(422).json({
+        error:
+          'The title, author, year or genre is missing from this update request',
+      });
+    }
     if (req.file) {
       const url = req.protocol + '://' + req.get('host');
-      req.body.book = JSON.parse(req.body.book);
       book = {
         title: req.body.book.title,
         userId: obook.userId,
         author: req.body.book.author,
-        imageURL: url + '/images/' + req.file.filename,
+        imageUrl: url + '/images/' + req.file.filename,
         year: req.body.book.year,
         genre: req.body.book.genre,
         ratings: obook.ratings,
         averageRating: obook.averageRating,
       };
+
     } else {
       book = {
         title: req.body.title,
         userId: obook.userId,
         author: req.body.author,
-        imageURL: obook.imageURL,
+        imageUrl: obook.imageURL,
         year: req.body.year,
         genre: req.body.genre,
         ratings: obook.ratings,
         averageRating: obook.averageRating,
       };
     }
-    // let totalRating = 0;
-    // book.ratings.forEach((rating) => {
-    //   totalRating = totalRating + rating.grade;
-    // });
-    // let averageRating = totalRating / book.ratings.length;
-    // book.averageRating = averageRating;
-    console.log(book);
     Book.updateOne({ _id: req.params.id }, book)
       .then(() => {
+        if(req.file){
+          const filename = obook.imageUrl.split('/images/')[1];
+          console.log('OBOOK = ' + obook)
+          console.log('images/' + filename)
+          fs.unlink('images/' + filename, () => {
+            console.log('Modified image changed and old image deleted successfully')
+          })
+        }
         res.status(200).json({
           message: 'Book updated Successfully',
         });
       })
       .catch((error) => {
-        console.log(error);
+        console.log('Error, server error' + error);
         res.status(400).json({
           error: `Erreur, ce livre n'a pu etre modifié` + error,
         });
@@ -185,11 +234,11 @@ exports.getBestBooks = (req, res, next) => {
 };
 
 exports.addRating = (req, res, next) => {
-  if(!req.body.userId || !req.body.rating){
-    console.log('Error, UserId or Rating from incoming request.')
+  if (!req.body.userId || !req.body.rating) {
+    console.log('Error, UserId or Rating from incoming request.');
     return res.status(400).json({
-      message: 'Error: elements missing from new rating'
-    })
+      message: 'Error: elements missing from new rating',
+    });
   }
   let newRating = {
     userId: req.body.userId,
@@ -207,12 +256,12 @@ exports.addRating = (req, res, next) => {
         message: 'Book not found',
       });
     }
-    const userIdMatch = function isSameUser(existingRating){
-      return existingRating.userId == newRating.userId
-    }
+    const userIdMatch = function isSameUser(existingRating) {
+      return existingRating.userId == newRating.userId;
+    };
     const exists = book.ratings.find(userIdMatch);
     if (exists) {
-      console.log('Error: Rating from that UserId already present. 400 Sent.')
+      console.log('Error: Rating from that UserId already present. 400 Sent.');
       return res.status(400).json({
         message: 'You have already left a review for this book',
       });
@@ -222,7 +271,9 @@ exports.addRating = (req, res, next) => {
     book
       .save()
       .then(() => {
-        console.log(`Added rating from ${newRating.userId} to book ${book.title} successfully`)
+        console.log(
+          `Added rating from ${newRating.userId} to book ${book.title} successfully`
+        );
         res.status(201).json(book);
       })
       .catch((error) => {
