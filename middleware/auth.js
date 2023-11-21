@@ -11,7 +11,7 @@ module.exports = (req, res, next) => {
     next();
   } catch{
     res.status(401).json({
-      message: 'Unauthorized'
+      message: 'Unauthorized. User is not connected'
     });
   }
 };

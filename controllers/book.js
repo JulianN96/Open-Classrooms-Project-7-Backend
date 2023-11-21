@@ -1,6 +1,6 @@
 const fs = require('fs');
 const Book = require('../models/book');
-const { Error } = require('mongoose');
+// const { Error } = require('mongoose');
 
 function averageRatingCalculator(book) {
   let totalRating = 0;
@@ -67,7 +67,14 @@ exports.getOneBook = (req, res, next) => {
 };
 
 exports.modifyBook = (req, res, next) => {
+  //TODO VALIDATORS AND AUTH, RAW TEXT STUFF!!!
   Book.findOne({ _id: req.params.id }).then((obook) => {
+    if (!obook) {
+      return res.status(404).json({
+        message: 'Book not found',
+      });
+    }
+
     console.log(obook);
     let book = Book({ _id: req.params.id });
     if (req.file) {
@@ -75,34 +82,36 @@ exports.modifyBook = (req, res, next) => {
       req.body.book = JSON.parse(req.body.book);
       book = {
         title: req.body.book.title,
-        userId: req.body.book.userId,
+        userId: obook.userId,
         author: req.body.book.author,
         imageURL: url + '/images/' + req.file.filename,
         year: req.body.book.year,
         genre: req.body.book.genre,
         ratings: obook.ratings,
+        averageRating: obook.averageRating,
       };
     } else {
       book = {
         title: req.body.title,
-        userId: req.body.userId,
+        userId: obook.userId,
         author: req.body.author,
         imageURL: obook.imageURL,
         year: req.body.year,
         genre: req.body.genre,
         ratings: obook.ratings,
+        averageRating: obook.averageRating,
       };
     }
-    let totalRating = 0;
-    book.ratings.forEach((rating) => {
-      totalRating = totalRating + rating.grade;
-    });
-    let averageRating = totalRating / book.ratings.length;
-    book.averageRating = averageRating;
+    // let totalRating = 0;
+    // book.ratings.forEach((rating) => {
+    //   totalRating = totalRating + rating.grade;
+    // });
+    // let averageRating = totalRating / book.ratings.length;
+    // book.averageRating = averageRating;
     console.log(book);
     Book.updateOne({ _id: req.params.id }, book)
       .then(() => {
-        res.status(201).json({
+        res.status(200).json({
           message: 'Book updated Successfully',
         });
       })
@@ -176,9 +185,12 @@ exports.getBestBooks = (req, res, next) => {
 };
 
 exports.addRating = (req, res, next) => {
-  //TODO ADD VALIDATOR FOR RATING VALUE AND USERID
-  console.log(req.params);
-  console.log(req.body);
+  if(!req.body.userId || !req.body.rating){
+    console.log('Error, UserId or Rating from incoming request.')
+    return res.status(400).json({
+      message: 'Error: elements missing from new rating'
+    })
+  }
   let newRating = {
     userId: req.body.userId,
     grade: req.body.rating,
@@ -195,21 +207,22 @@ exports.addRating = (req, res, next) => {
         message: 'Book not found',
       });
     }
-    book.ratings.forEach((rating) => {
-      console.log(rating.userId);
-      if (rating.userId == newRating.userId) {
-        return res.status(400).json({
-          message: 'You have already left a review for this book',
-        });
-      }
-    });
-    console.log('*****', book);
+    const userIdMatch = function isSameUser(existingRating){
+      return existingRating.userId == newRating.userId
+    }
+    const exists = book.ratings.find(userIdMatch);
+    if (exists) {
+      console.log('Error: Rating from that UserId already present. 400 Sent.')
+      return res.status(400).json({
+        message: 'You have already left a review for this book',
+      });
+    }
     book.ratings.push(newRating);
     book.averageRating = averageRatingCalculator(book);
-    console.log(book);
     book
       .save()
       .then(() => {
+        console.log(`Added rating from ${newRating.userId} to book ${book.title} successfully`)
         res.status(201).json(book);
       })
       .catch((error) => {
