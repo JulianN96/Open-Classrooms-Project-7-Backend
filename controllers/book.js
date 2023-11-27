@@ -14,6 +14,38 @@ function averageRatingCalculator(book) {
 exports.createBook = (req, res, next) => {
   const url = req.protocol + '://' + req.get('host');
   const bookobject = JSON.parse(req.body.book);
+
+  //Checks for any missing elements
+  if (
+    !bookobject.title ||
+    !bookobject.author ||
+    !bookobject.year ||
+    !bookobject.genre
+  ) {
+    console.log(bookobject.title, bookobject.author, bookobject.year, bookobject.genre)
+    console.log(
+      'Error, an element is missing from the incoming request body'
+    );
+    return res.status(400).json({
+      message:
+        'The title, author, year or genre is missing from this creation request',
+    });
+  } 
+  //Checks for only spaces in the fields
+  else if (
+    !bookobject.title.trim().length ||
+    !bookobject.author.trim().length ||
+    bookobject.year == NaN ||
+    !bookobject.genre.trim().length
+  ) {
+    console.log(
+      'Error, an element is not formatted correctly from the incoming request body'
+    );
+    return res.status(422).json({
+      error:
+        'The title, author, year or genre is missing from this creation request',
+    });
+  }
   if (!req.file) {
     return res.status(400).json({
       message: 'No image detected',
@@ -210,7 +242,6 @@ exports.getAllBooks = (req, res, next) => {
   Book.find()
     .then((books) => {
       res.status(200).json(books);
-      console.log(books);
     })
     .catch((error) => {
       res.status(404).json({
